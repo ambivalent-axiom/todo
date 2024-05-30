@@ -16,7 +16,7 @@ class Todo implements JsonSerializable
     private InputInterface $symfonyInput;
     private QuestionHelper $helper;
 
-    const VALID_STR_LENGTH = 12; //string validation function
+    const VALID_STR_LENGTH = 30; //string validation function
 
     public function __construct(
         string          $name,
@@ -43,11 +43,13 @@ class Todo implements JsonSerializable
     {
         $table = new Table($this->symfonyOutput);
         $table
-            ->setHeaders(['id', 'task name', 'status'])
+            ->setHeaders(['id', 'created', 'task name', 'deadline', 'status'])
             ->setRows(array_map(function ($task) {
                 return [
                     $task->getId(),
+                    $task->getStateStart(),
                     $task->getName(),
+                    $task->getDeadline(),
                     $task->getState(),
                 ];
             }, $this->tasks));
@@ -55,13 +57,13 @@ class Todo implements JsonSerializable
         $table->setStyle('box-double');
         $table->render();
     }
-    private function addTask(int $id, string $name, string $state, Carbon $stateEnd): void
+    private function addTask(int $id, string $name, Carbon $stateStart, Carbon $stateEnd): void
     {
-        $newTask = new Task($id, $name, $state, $stateEnd);
+        $newTask = new Task($id, $name, $stateStart->toString(), $stateEnd->toString());
         $newTask->setTodo($this);
         $this->tasks[] = $newTask;
     }
-    private function saveZoo(): void
+    private function save(): void
     {
         $todo = 'saved/list.json';
         $json = json_encode($this);
@@ -84,7 +86,12 @@ class Todo implements JsonSerializable
             switch ($choice)
             {
                 case 'add':
-                    echo "add";
+                    $this->addTask(
+                        $this->getAutoIncrementId(),
+                        self::validateName("Task", "Enter task name: "),
+                        Carbon::now(),
+                        $this->selectDeadline(self::validateNum("Deadline after days?: "))
+                    );
                     break;
                 case 'edit':
                     echo "edit";
@@ -97,6 +104,7 @@ class Todo implements JsonSerializable
                     $this->removeTask($task);
                     break;
                 case 'exit':
+                    $this->save();
                     exit;
             }
         }
@@ -104,7 +112,6 @@ class Todo implements JsonSerializable
     private function initTasksOnLoad(): void
     {
         foreach ($this->tasks as $animal) {
-            $animal->setUser($this->user);
             $animal->setTodo($this);
         }
     }
@@ -136,6 +143,22 @@ class Todo implements JsonSerializable
         }
         return false;
     }
+    private function getAutoIncrementId(): int
+    {
+        if (count($this->tasks) === 0) {
+            return 0;
+        }
+        $ids = array_map(function ($task) {
+            return $task->getId();
+        }, $this->tasks);
+        return max($ids) + 1;
+    }
+    private function selectDeadline(int $days): Carbon
+    {
+        return Carbon::now()->addDays($days);
+    }
+
+
     public static function cls(): void {
         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
             system('cls');
@@ -153,6 +176,16 @@ class Todo implements JsonSerializable
             echo "$who name must be a string, max 12 chars.\n";
         }
     }
+    public static function validateNum($prompt): int
+    {
+        while(true) {
+            $num = readline($prompt);
+            if (is_numeric($num)) {
+                return $num;
+            }
+            echo "Number must be a valid integer.\n";
+        }
+    }
     public static function load(string $json, OutputInterface $output, InputInterface $input): Todo
     {
         $todo = json_decode(file_get_contents($json));
@@ -162,9 +195,9 @@ class Todo implements JsonSerializable
             $tasks[] = new Task(
                 $task->id,
                 $task->name,
-                $task->state,
                 $task->created,
-                $task->deadline
+                $task->deadline,
+                $task->status,
             );
         }
         return new self($todo->name, $output, $input, $tasks);

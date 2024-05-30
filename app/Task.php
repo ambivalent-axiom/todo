@@ -1,6 +1,5 @@
 <?php
 namespace App;
-use Carbon\Carbon;
 use JsonSerializable;
 
 class Task implements JsonSerializable
@@ -9,23 +8,24 @@ class Task implements JsonSerializable
     private string $name;
     private Todo $todo;
     private string $state;
-    private Carbon $stateStart;
-    private Carbon $stateEnd;
+    private string $stateStart;
+    private string $deadline;
+    private $states = ['ToDo', 'In Progress', 'Completed'];
 
 
     public function __construct(
         int $id,
         string $name,
-        string $state,
-        Carbon $stateStart,
-        Carbon $stateEnd
+        string $stateStart,
+        string $stateEnd,
+        string $state = 'ToDo'
     )
     {
         $this->id = $id;
         $this->name = $name;
         $this->state = $state;
         $this->stateStart = $stateStart;
-        $this->stateEnd = $stateEnd;
+        $this->deadline = $stateEnd;
     }
 
     public function jsonSerialize(): array
@@ -35,13 +35,17 @@ class Task implements JsonSerializable
             'name' => $this->name,
             'status' => $this->state,
             'created' => $this->stateStart,
-            'deadline' => $this->stateEnd,
+            'deadline' => $this->deadline,
         ];
     }
 
     public function getName(): string
     {
         return $this->name;
+    }
+    public function getId(): int
+    {
+        return $this->id;
     }
     public function getState(): string
     {
@@ -51,13 +55,21 @@ class Task implements JsonSerializable
     {
         $this->state = $state;
     }
-    public function setStateStart(Carbon $stateStart): void
+    public function setStateStart(string $stateStart): void
     {
         $this->stateStart = $stateStart;
     }
-    public function getStateStart(): Carbon
+    public function getStateStart(): string
     {
         return $this->stateStart;
+    }
+    public function getDeadline(): string
+    {
+        return $this->deadline;
+    }
+    public function setStateEnd(string $deadline): void
+    {
+        $this->deadline = $deadline;
     }
     public function setTodo(Todo $todo): void
     {
