@@ -1,7 +1,6 @@
 <?php
 namespace App;
 use JsonSerializable;
-
 class Task implements JsonSerializable
 {
     private int $id;
@@ -35,7 +34,6 @@ class Task implements JsonSerializable
             'status' => $this->status,
         ];
     }
-
     public function getName(): string
     {
         return $this->name;

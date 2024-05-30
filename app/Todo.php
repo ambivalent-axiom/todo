@@ -7,7 +7,6 @@ use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ChoiceQuestion;
-
 class Todo implements JsonSerializable
 {
     private string $name;
@@ -56,7 +55,7 @@ class Todo implements JsonSerializable
     }
     private function addTask(int $id, string $name, Carbon $stateStart, Carbon $stateEnd): void
     {
-        $newTask = new Task($id, $stateStart->toString(), $name, $stateEnd->toString());
+        $newTask = new Task($id, $stateStart->toDateString(), $name, $stateEnd->toDateString());
         $this->tasks[] = $newTask;
     }
     private function save(): void
@@ -167,7 +166,7 @@ class Todo implements JsonSerializable
                 echo $deadline = $this->selectDeadline(
                     self::validateNum("Deadline in days from $created?: ")
                 );
-                $task->setDeadline($deadline->toString());
+                $task->setDeadline($deadline->toDateString());
                 break;
             case 'status':
                 $task->setStatus($this->selectStatus());
