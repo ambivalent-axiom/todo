@@ -6,36 +6,33 @@ class Task implements JsonSerializable
 {
     private int $id;
     private string $name;
-    private Todo $todo;
-    private string $state;
-    private string $stateStart;
+    private string $status;
+    private string $created;
     private string $deadline;
-    private $states = ['ToDo', 'In Progress', 'Completed'];
-
-
+    private const STATES = ['ToDo', 'In Progress', 'Completed'];
+    private const PROPERTIES = ['id', 'created', 'name', 'deadline', 'status'];
     public function __construct(
         int $id,
+        string $created,
         string $name,
-        string $stateStart,
         string $stateEnd,
-        string $state = 'ToDo'
+        string $status = 'ToDo'
     )
     {
         $this->id = $id;
+        $this->created = $created;
         $this->name = $name;
-        $this->state = $state;
-        $this->stateStart = $stateStart;
         $this->deadline = $stateEnd;
+        $this->status = $status;
     }
-
     public function jsonSerialize(): array
     {
         return [
             'id' => $this->id,
+            'created' => $this->created,
             'name' => $this->name,
-            'status' => $this->state,
-            'created' => $this->stateStart,
             'deadline' => $this->deadline,
+            'status' => $this->status,
         ];
     }
 
@@ -43,36 +40,44 @@ class Task implements JsonSerializable
     {
         return $this->name;
     }
+    public function setName(string $name): void
+    {
+        $this->name = $name;
+    }
     public function getId(): int
     {
         return $this->id;
     }
-    public function getState(): string
+    public function getStatus(): string
     {
-        return $this->state;
+        return $this->status;
     }
-    public function setState(string $state): void
+    public function setStatus(string $status): void
     {
-        $this->state = $state;
+        $this->status = $status;
     }
-    public function setStateStart(string $stateStart): void
+    public function setCreated(string $created): void
     {
-        $this->stateStart = $stateStart;
+        $this->created = $created;
     }
-    public function getStateStart(): string
+    public function getCreated(): string
     {
-        return $this->stateStart;
+        return $this->created;
     }
     public function getDeadline(): string
     {
         return $this->deadline;
     }
-    public function setStateEnd(string $deadline): void
+    public function setDeadline(string $deadline): void
     {
         $this->deadline = $deadline;
     }
-    public function setTodo(Todo $todo): void
+    public static function getColumns(): array
     {
-        $this->todo = $todo;
+        return self::PROPERTIES;
+    }
+    public static function getStates(): array
+    {
+        return self::STATES;
     }
 }

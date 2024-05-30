@@ -15,9 +15,7 @@ class Todo implements JsonSerializable
     private OutputInterface $symfonyOutput;
     private InputInterface $symfonyInput;
     private QuestionHelper $helper;
-
     const VALID_STR_LENGTH = 30; //string validation function
-
     public function __construct(
         string          $name,
         OutputInterface $symfonyOutput,
@@ -29,7 +27,6 @@ class Todo implements JsonSerializable
             $this->symfonyOutput = $symfonyOutput;
             $this->symfonyInput = $symfonyInput;
             $this->helper = new QuestionHelper();
-            $this->initTasksOnLoad();
             $this->mainLoop();
     }
     public function jsonSerialize(): array
@@ -43,14 +40,14 @@ class Todo implements JsonSerializable
     {
         $table = new Table($this->symfonyOutput);
         $table
-            ->setHeaders(['id', 'created', 'task name', 'deadline', 'status'])
+            ->setHeaders(Task::getColumns())
             ->setRows(array_map(function ($task) {
                 return [
                     $task->getId(),
-                    $task->getStateStart(),
+                    $task->getCreated(),
                     $task->getName(),
                     $task->getDeadline(),
-                    $task->getState(),
+                    $task->getStatus(),
                 ];
             }, $this->tasks));
         $table->setHeaderTitle($this->name);
@@ -59,8 +56,7 @@ class Todo implements JsonSerializable
     }
     private function addTask(int $id, string $name, Carbon $stateStart, Carbon $stateEnd): void
     {
-        $newTask = new Task($id, $name, $stateStart->toString(), $stateEnd->toString());
-        $newTask->setTodo($this);
+        $newTask = new Task($id, $stateStart->toString(), $name, $stateEnd->toString());
         $this->tasks[] = $newTask;
     }
     private function save(): void
@@ -94,10 +90,16 @@ class Todo implements JsonSerializable
                     );
                     break;
                 case 'edit':
-                    echo "edit";
+                    if($this->checkTaskCount()) {
+                        echo "No tasks to Edit!";
+                        break;
+                    }
+                    $task = $this->selectTasks();
+                    $this->editTask($task);
                     break;
                 case 'remove':
                     if($this->checkTaskCount()) {
+                        echo "No tasks to Remove!";
                         break;
                     }
                     $task = $this->selectTasks();
@@ -107,12 +109,6 @@ class Todo implements JsonSerializable
                     $this->save();
                     exit;
             }
-        }
-    }
-    private function initTasksOnLoad(): void
-    {
-        foreach ($this->tasks as $animal) {
-            $animal->setTodo($this);
         }
     }
     private function selectTasks(): Task
@@ -138,7 +134,6 @@ class Todo implements JsonSerializable
     }
     private function checkTaskCount(): bool {
         if(count($this->tasks) === 0) {
-            echo 'No tasks!';
             return true;
         }
         return false;
@@ -157,8 +152,35 @@ class Todo implements JsonSerializable
     {
         return Carbon::now()->addDays($days);
     }
-
-
+    private function editTask(Task $task): void
+    {
+        $options = array_slice(Task::getColumns(), 2);
+        $choice = new ChoiceQuestion('Select property to edit: ', $options);
+        $choice->setErrorMessage('Option %s is invalid.');
+        $choice = $this->helper->ask($this->symfonyInput, $this->symfonyOutput, $choice);
+        switch ($choice) {
+            case 'name':
+                $task->setName(self::validateName("Task", "Enter new name: "));
+                break;
+            case 'deadline':
+                $created = $task->getCreated();
+                echo $deadline = $this->selectDeadline(
+                    self::validateNum("Deadline in days from $created?: ")
+                );
+                $task->setDeadline($deadline->toString());
+                break;
+            case 'status':
+                $task->setStatus($this->selectStatus());
+                break;
+        }
+    }
+    private function selectStatus(): string
+    {
+        $options = Task::getStates();
+        $choice = new ChoiceQuestion('Change state to: ', $options);
+        $choice->setErrorMessage('Option %s is invalid.');
+        return $this->helper->ask($this->symfonyInput, $this->symfonyOutput, $choice);
+    }
     public static function cls(): void {
         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
             system('cls');
@@ -173,7 +195,7 @@ class Todo implements JsonSerializable
             if($name != '' && strlen($name) <= self::VALID_STR_LENGTH && !is_numeric($name)) {
                 return $name;
             }
-            echo "$who name must be a string, max 12 chars.\n";
+            echo "$who name must be a string, max " . self::VALID_STR_LENGTH . " chars.\n";
         }
     }
     public static function validateNum($prompt): int
@@ -190,12 +212,11 @@ class Todo implements JsonSerializable
     {
         $todo = json_decode(file_get_contents($json));
         $tasks = [];
-
         foreach ($todo->tasks as $task) {
             $tasks[] = new Task(
                 $task->id,
-                $task->name,
                 $task->created,
+                $task->name,
                 $task->deadline,
                 $task->status,
             );
